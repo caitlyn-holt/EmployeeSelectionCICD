@@ -15,9 +15,6 @@ env:
   COVERAGE_DIR: './coverage'
 
 jobs:
-  # ===========================
-  # СТАДИЯ 1: TEST
-  # ===========================
   test:
     name: Test Stage
     runs-on: windows-latest
@@ -39,7 +36,6 @@ jobs:
     - name: Build
       run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
 
-    # Lint - проверка стиля кода
     - name: Run Linting (StyleCop)
       run: |
         dotnet build ${{ env.SOLUTION_PATH }} `
@@ -50,7 +46,6 @@ jobs:
           /p:TreatWarningsAsErrors=false
       continue-on-error: true
 
-    # Static Analysis
     - name: Run Static Analysis
       run: |
         dotnet build ${{ env.SOLUTION_PATH }} `
@@ -59,7 +54,6 @@ jobs:
           /p:TreatWarningsAsErrors=false
       continue-on-error: true
 
-    # Unit Tests with Coverage AND Test Results
     - name: Run Unit Tests with Coverage
       run: |
         dotnet test ${{ env.TEST_PROJECT_PATH }} `
@@ -72,7 +66,6 @@ jobs:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
       continue-on-error: true
 
-    # Find and display generated files for debugging
     - name: Debug - List generated files
       run: |
         Write-Host "=== TEST RESULTS ==="
@@ -82,7 +75,6 @@ jobs:
       shell: pwsh
       if: always()
 
-    # Upload test results (with flexible path)
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
       if: always()
@@ -95,7 +87,6 @@ jobs:
         retention-days: 7
         if-no-files-found: warn
 
-    # Upload coverage reports
     - name: Upload Coverage Reports
       uses: actions/upload-artifact@v4
       if: always()
@@ -107,9 +98,6 @@ jobs:
         retention-days: 7
         if-no-files-found: warn
 
-  # ===========================
-  # СТАДИЯ 2: INTEGRATION
-  # ===========================
   integration:
     name: Integration Stage
     runs-on: windows-latest
@@ -150,9 +138,6 @@ jobs:
         retention-days: 7
         if-no-files-found: warn
 
-  # ===========================
-  # СТАДИЯ 3: REPORT
-  # ===========================
   report:
     name: Report Stage
     runs-on: windows-latest
