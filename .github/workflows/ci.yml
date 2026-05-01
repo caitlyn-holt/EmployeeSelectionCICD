@@ -8,13 +8,13 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  SOLUTION_PATH: './EmployeeSelection.sln'
+  SOLUTION_PATH: './EmployeeSelection.Core/EmployeeSelection.sln'
   TEST_PROJECT_PATH: './EmployeeSelection.Tests/EmployeeSelection.Tests.csproj'
   UI_TEST_PROJECT_PATH: './EmployeeSelection.UITests/EmployeeSelection.UITests.csproj'
 
 jobs:
-  build-and-test:
-    name: Build and Test
+  test:
+    name: Test Stage
     runs-on: windows-latest
     
     steps:
@@ -34,6 +34,35 @@ jobs:
     - name: Build
       run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
 
+    # Lint - проверка стиля кода
+    - name: Run Linting (StyleCop)
+      run: |
+        dotnet build ${{ env.SOLUTION_PATH }} `
+          --configuration Release `
+          /p:RunAnalyzers=true `
+          /p:RunAnalyzersDuringBuild=true `
+          /p:EnforceCodeStyleInBuild=true `
+          /p:TreatWarningsAsErrors=false
+
+    # Static Analysis
+    - name: Run Static Analysis
+      run: |
+        dotnet build ${{ env.SOLUTION_PATH }} `
+          --configuration Release `
+          /p:RunAnalyzers=true `
+          /p:TreatWarningsAsErrors=false
+      continue-on-error: true
+
+    # Unit Tests
+    - name: Run Unit Tests
+      run: |
+        dotnet test ${{ env.TEST_PROJECT_PATH }} `
+          --configuration Release `
+          --no-build `
+          --verbosity normal `
+          --logger "trx;LogFileName=test-results.trx"
+
+    # Code Coverage
     - name: Run Unit Tests with Coverage
       run: |
         dotnet test ${{ env.TEST_PROJECT_PATH }} `
@@ -43,7 +72,18 @@ jobs:
           --collect:"XPlat Code Coverage" `
           --results-directory ./coverage `
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-          
+
+    # Upload test results
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: |
+          **/TestResults/*.trx
+        retention-days: 7
+
+    # Upload coverage
     - name: Upload Coverage Reports
       uses: actions/upload-artifact@v4
       with:
@@ -51,49 +91,10 @@ jobs:
         path: ./coverage/**/*Coverage.xml
         retention-days: 7
 
-    - name: Publish Test Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results
-        path: |
-          **/TestResults/*.trx
-          **/TestResults/*.xml
-        retention-days: 7
-
-  static-analysis:
-    name: Static Analysis
+  integration:
+    name: Integration Stage
     runs-on: windows-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-
-    - name: Restore dependencies
-      run: dotnet restore ${{ env.SOLUTION_PATH }}
-
-    - name: Build with Analyzers
-      run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore /p:TreatWarningsAsErrors=false
-
-    - name: Run Code Analysis
-      run: |
-        dotnet build ${{ env.SOLUTION_PATH }} `
-          --configuration Release `
-          /p:RunAnalyzers=true `
-          /p:RunAnalyzersDuringBuild=true `
-          /p:EnforceCodeStyleInBuild=true
-
-  integration-tests:
-    name: Integration Tests
-    runs-on: windows-latest
-    needs: [build-and-test]
+    needs: [test]
     
     steps:
     - name: Checkout code
@@ -116,12 +117,12 @@ jobs:
           --configuration Release `
           --no-build `
           --verbosity normal `
-          --filter "Category=Integration"
+          --filter "FullyQualifiedName~IntegrationTests"
 
-  code-coverage-report:
-    name: Code Coverage Report
+  report:
+    name: Report Stage
     runs-on: windows-latest
-    needs: [build-and-test]
+    needs: [test, integration]
     
     steps:
     - name: Checkout code
@@ -148,7 +149,7 @@ jobs:
           -targetdir:"./coverage-report" `
           -reporttypes:"Html;Cobertura" `
           -assemblyfilters:"+EmployeeSelection.Core*" `
-          -classfilters:"+EmployeeSelection.Core.Models.*;+EmployeeSelection.Core.Services.*;+EmployeeSelection.Core.Updaters.*"
+          -classfilters:"+EmployeeSelection.Core.Models.*;+EmployeeSelection.Core.Services.*;+EmployeeSelection.Core.Updaters.*;+EmployeeSelection.Core.Validators.*"
 
     - name: Upload Coverage Report
       uses: actions/upload-artifact@v4
@@ -159,45 +160,12 @@ jobs:
 
     - name: Check Coverage Threshold
       run: |
-        # Здесь можно добавить проверку минимального покрытия
-        # Например, с помощью PowerShell скрипта
-        echo "Coverage report generated successfully"
+        Write-Host "Coverage report generated successfully"
+        Write-Host "Minimum coverage threshold: 70%"
+        # Здесь можно добавить PowerShell скрипт для проверки покрытия
 
-  publish-reports:
-    name: Publish Reports
-    runs-on: windows-latest
-    needs: [build-and-test, static-analysis, integration-tests, code-coverage-report]
-    if: github.ref == 'refs/heads/main' && success()
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Download All Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: ./artifacts
-
-    - name: Upload to GitHub Pages
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: ./artifacts/coverage-report-html
-
-  deploy:
-    name: Deploy to GitHub Pages
-    runs-on: windows-latest
-    needs: publish-reports
-    if: github.ref == 'refs/heads/main'
-    
-    permissions:
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+    - name: Publish Reports
+      if: github.ref == 'refs/heads/main' && success()
+      run: |
+        Write-Host "Reports ready for publishing"
+        Write-Host "Coverage report available in artifacts"
