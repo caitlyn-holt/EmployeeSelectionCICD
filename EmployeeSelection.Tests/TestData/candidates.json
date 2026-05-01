@@ -1,0 +1,22 @@
+﻿[
+  {
+    "Name": "Alex",
+    "Skill": "C#",
+    "Experience": 5
+  },
+  {
+    "Name": "Anna",
+    "Skill": "Java",
+    "Experience": 3
+  },
+  {
+    "Name": "John",
+    "Skill": "C#",
+    "Experience": 4
+  },
+  {
+    "Name": "Kate",
+    "Skill": "Python",
+    "Experience": 2
+  }
+]

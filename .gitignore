@@ -1,0 +1,31 @@
+#  Скомпилированные файлы и временные папки
+[Bb]in/
+[Oo]bj/
+*.dll
+*.exe
+*.pdb
+*.log
+
+#  Визуальная студия и кэш
+.vs/
+*.suo
+*.user
+*.cache
+*.sln.iml
+*.DotSettings.user
+
+#  Результаты тестов и отчёты
+TestResults/
+*.trx
+*.coverage
+*.xml
+*.html
+
+#  Документация и личное (не нужны в CI)
+*.docx
+*.pdf
+*.txt
+~$*
+
+#  SpecFlow & BDD generated
+*.feature.cs

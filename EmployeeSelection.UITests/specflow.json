@@ -1,0 +1,10 @@
+{
+  "unitTestProvider": {
+    "name": "mstest"
+  },
+  "stepAssemblies": [
+    {
+      "assembly": "EmployeeSelection.UITests"
+    }
+  ]
+}
