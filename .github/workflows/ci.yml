@@ -11,6 +11,8 @@ env:
   SOLUTION_PATH: './EmployeeSelection.Core/EmployeeSelection.sln'
   TEST_PROJECT_PATH: './EmployeeSelection.Tests/EmployeeSelection.Tests.csproj'
   UI_TEST_PROJECT_PATH: './EmployeeSelection.UITests/EmployeeSelection.UITests.csproj'
+  TEST_RESULTS_DIR: './test-results'
+  COVERAGE_DIR: './coverage'
 
 jobs:
   # ===========================
@@ -57,7 +59,7 @@ jobs:
           /p:TreatWarningsAsErrors=false
       continue-on-error: true
 
-    # Unit Tests with Coverage
+    # Unit Tests with Coverage AND Test Results
     - name: Run Unit Tests with Coverage
       run: |
         dotnet test ${{ env.TEST_PROJECT_PATH }} `
@@ -65,38 +67,43 @@ jobs:
           --no-build `
           --verbosity normal `
           --collect:"XPlat Code Coverage" `
-          --results-directory ./coverage `
+          --results-directory "${{ env.TEST_RESULTS_DIR }}" `
           --logger "trx;LogFileName=test-results.trx" `
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+      continue-on-error: true
 
-    # Find and display coverage files
-    - name: Find Coverage Files
+    # Find and display generated files for debugging
+    - name: Debug - List generated files
       run: |
-        Write-Host "Looking for coverage files..."
-        Get-ChildItem -Recurse -Path ./coverage | Select-Object FullName
+        Write-Host "=== TEST RESULTS ==="
+        Get-ChildItem -Recurse -Path "${{ env.TEST_RESULTS_DIR }}" -ErrorAction SilentlyContinue | Select-Object FullName
+        Write-Host "=== COVERAGE FILES ==="
+        Get-ChildItem -Recurse -Path "${{ env.COVERAGE_DIR }}" -ErrorAction SilentlyContinue | Select-Object FullName
       shell: pwsh
       if: always()
 
-    # Upload test results
+    # Upload test results (with flexible path)
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results
         path: |
-          **/TestResults/*.trx
+          ${{ env.TEST_RESULTS_DIR }}/**/*.trx
+          ${{ env.TEST_RESULTS_DIR }}/**/coverage.cobertura.xml
+          ${{ env.TEST_RESULTS_DIR }}/**/coverage.opencover.xml
         retention-days: 7
         if-no-files-found: warn
 
-    # Upload coverage
+    # Upload coverage reports
     - name: Upload Coverage Reports
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: coverage-reports
         path: |
-          ./coverage/**/*.xml
-          ./coverage/**/coverage.cobertura.xml
-          ./coverage/**/coverage.opencover.xml
+          ${{ env.TEST_RESULTS_DIR }}/**/coverage.*.xml
+          ${{ env.COVERAGE_DIR }}/**/*.xml
         retention-days: 7
         if-no-files-found: warn
 
@@ -129,8 +136,19 @@ jobs:
           --configuration Release `
           --no-build `
           --verbosity normal `
-          --filter "FullyQualifiedName~IntegrationTests"
+          --filter "FullyQualifiedName~IntegrationTests" `
+          --results-directory "${{ env.TEST_RESULTS_DIR }}" `
+          --logger "trx;LogFileName=integration-results.trx"
       continue-on-error: true
+
+    - name: Upload Integration Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: integration-test-results
+        path: "${{ env.TEST_RESULTS_DIR }}/**/*.trx"
+        retention-days: 7
+        if-no-files-found: warn
 
   # ===========================
   # СТАДИЯ 3: REPORT
@@ -148,13 +166,13 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: coverage-reports
-        path: ./coverage
+        path: ./downloaded-coverage
       continue-on-error: true
 
     - name: List downloaded files
       run: |
-        Write-Host "Downloaded files:"
-        Get-ChildItem -Recurse -Path ./coverage | Select-Object FullName
+        Write-Host "Downloaded coverage files:"
+        Get-ChildItem -Recurse -Path ./downloaded-coverage -ErrorAction SilentlyContinue | Select-Object FullName
       shell: pwsh
 
     - name: Setup .NET
@@ -167,10 +185,10 @@ jobs:
 
     - name: Generate Coverage Report
       run: |
-        $coverageFiles = Get-ChildItem -Recurse -Path ./coverage -Filter "*.xml" -ErrorAction SilentlyContinue
+        $coverageFiles = Get-ChildItem -Recurse -Path ./downloaded-coverage -Filter "*.xml" -ErrorAction SilentlyContinue
         if ($coverageFiles.Count -gt 0) {
           reportgenerator `
-            -reports:"./coverage/**/*.xml" `
+            -reports:"./downloaded-coverage/**/*.xml" `
             -targetdir:"./coverage-report" `
             -reporttypes:"Html;Cobertura" `
             -assemblyfilters:"+EmployeeSelection.Core*" `
@@ -196,7 +214,6 @@ jobs:
       run: |
         Write-Host "Coverage report generated successfully"
         Write-Host "Minimum coverage threshold: 70%"
-        # Здесь можно добавить PowerShell скрипт для проверки покрытия
 
     - name: Publish Reports
       if: github.ref == 'refs/heads/main' && success()

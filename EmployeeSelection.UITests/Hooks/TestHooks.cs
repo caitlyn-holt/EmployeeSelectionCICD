@@ -1,11 +1,11 @@
-﻿using EmployeeSelection.UITests.PageObjects;
+using EmployeeSelection.UITests.PageObjects;
 using System;
 using TechTalk.SpecFlow;
 
 [Binding]
 public class TestHooks
 {
-    private static LoginWindowPage _loginPage;
+    private static LoginWindowPage? _loginPage;
 
     [BeforeScenario]
     public static void BeforeScenario()

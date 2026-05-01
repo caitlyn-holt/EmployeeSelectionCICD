@@ -1,5 +1,5 @@
-﻿using EmployeeSelection.Core.Services;
 using System.Windows;
+using EmployeeSelection.Core.Services;
 
 namespace EmployeeSelection.UI
 {
@@ -19,7 +19,7 @@ namespace EmployeeSelection.UI
             {
                 var user = _authService.Login(txtUsername.Text, txtPassword.Password);
                 MessageBox.Show($"Добро пожаловать, {user.Username}!");
-                lblError.Content = "";
+                lblError.Content = " ";
                 txtUsername.Clear();
                 txtPassword.Clear();
             }
@@ -39,7 +39,7 @@ namespace EmployeeSelection.UI
             {
                 var user = _authService.RegisterUser(txtUsername.Text, txtPassword.Password, "User");
                 MessageBox.Show($"Пользователь {user.Username} зарегистрирован!");
-                lblError.Content = "";
+                lblError.Content = " ";
                 txtUsername.Clear();
                 txtPassword.Clear();
             }

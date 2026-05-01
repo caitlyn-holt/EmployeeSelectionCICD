@@ -1,4 +1,4 @@
-﻿using FlaUI.Core;
+using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.UIA3;
 using System;
@@ -10,8 +10,12 @@ namespace EmployeeSelection.UITests.PageObjects
 {
     public class LoginWindowPage : IDisposable
     {
+#pragma warning disable IDE0044
         private Application _app;
+#pragma warning restore IDE0044
+#pragma warning disable IDE0044
         private UIA3Automation _automation;
+#pragma warning restore IDE0044
         private Window _window;
 
         public LoginWindowPage(string appPath)
@@ -20,23 +24,24 @@ namespace EmployeeSelection.UITests.PageObjects
             Thread.Sleep(3000);
 
             _automation = new UIA3Automation();
-            _window = _app.GetMainWindow(_automation);
+            _window = _app.GetMainWindow(_automation)!;
             Thread.Sleep(2000);
         }
 
-        private TextBox UsernameTextBox =>
+        // Исправлено: добавлены ? для nullable типов
+        private TextBox? UsernameTextBox =>
             _window.FindFirstDescendant(cf => cf.ByAutomationId("txtUsername"))?.AsTextBox();
 
-        private TextBox PasswordBoxElement =>
+        private TextBox? PasswordBoxElement =>
             _window.FindFirstDescendant(cf => cf.ByAutomationId("txtPassword"))?.AsTextBox();
 
-        private Button LoginButton =>
+        private Button? LoginButton =>
             _window.FindFirstDescendant(cf => cf.ByAutomationId("btnLogin"))?.AsButton();
 
-        private Button RegisterButton =>
+        private Button? RegisterButton =>
             _window.FindFirstDescendant(cf => cf.ByAutomationId("btnRegister"))?.AsButton();
 
-        private Label ErrorLabel =>
+        private Label? ErrorLabel =>
             _window.FindFirstDescendant(cf => cf.ByAutomationId("lblError"))?.AsLabel();
 
         public void EnterUsername(string username)
@@ -128,9 +133,10 @@ namespace EmployeeSelection.UITests.PageObjects
             }
             catch
             {
-                
+                // Игнорируем ошибки при закрытии
             }
         }
+
         public void ClearFields()
         {
             try
@@ -151,12 +157,12 @@ namespace EmployeeSelection.UITests.PageObjects
             }
             catch
             {
-                
+                // Игнорируем ошибки
             }
         }
+
         public bool AreFieldsCleared()
         {
-            // Проверяем, что поля пустые после успешного входа
             string username = UsernameTextBox?.Text ?? "";
             string password = PasswordBoxElement?.Text ?? "";
             return string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password);
@@ -166,38 +172,12 @@ namespace EmployeeSelection.UITests.PageObjects
         {
             try
             {
-                // Ищем элемент с сообщением об ошибке
                 var errorLabel = _window.FindFirstDescendant(cf => cf.ByAutomationId("lblError"));
 
                 if (errorLabel != null)
                 {
                     string text = errorLabel.AsLabel()?.Text ?? "";
-                    bool hasText = !string.IsNullOrEmpty(text);
-
-                    if (hasText)
-                    {
-                        Console.WriteLine($"Найдено сообщение: '{text}'");
-                    }
-
-                    return hasText;
-                }
-                var allElements = _window.FindAllDescendants();
-                foreach (var element in allElements)
-                {
-                    try
-                    {
-                        var label = element.AsLabel();
-                        if (label != null && label.SetForeground != null)
-                        {
-                            string text = label.Text ?? "";
-                            if (text.Length > 0)
-                            {
-                                Console.WriteLine($"Найден Label с текстом: '{text}'");
-                                return true;
-                            }
-                        }
-                    }
-                    catch { }
+                    return !string.IsNullOrEmpty(text);
                 }
 
                 return false;
