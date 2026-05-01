@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 
 namespace EmployeeSelection.UI
 {
@@ -8,5 +8,4 @@ namespace EmployeeSelection.UI
     public partial class App : Application
     {
     }
-
 }
